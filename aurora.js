@@ -54,6 +54,17 @@ function handleSpreadsheetEdit(e) {
 	var valorSelecionado = range.getValue();
 	var sheetName = sheet.getName();
 
+	// Utilitário: normaliza texto (lowercase + remoção de acentos + trim)
+	function normalizeText(value) {
+		if (value === null || typeof value === "undefined") return "";
+		return value
+			.toString()
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.toLowerCase()
+			.trim();
+	}
+
 	// COLUNAS IMPORTANTES
 	var colunaStatus = 1; // A
 	var colunaProcesso = 2; // B
@@ -63,13 +74,24 @@ function handleSpreadsheetEdit(e) {
 	var colunaData = 17; // Q
 	var colunaAuditor = 19; // S
 
-	// BLOCO 1 – Atualiza data na coluna R se o status mudou (exceto "ANÁLISE")
-	if (coluna === colunaStatus && linha > 1) {
+	// BLOCO 1 – Atualiza data na coluna Q se o status mudou (exceto "ANÁLISE")
+	if (sheetName === "CONTROLE 2025" && coluna === colunaStatus && linha > 1) {
 		var cellData = sheet.getRange(linha, colunaData);
-		if (valorSelecionado === "") {
-			cellData.setValue("");
-		} else if (valorSelecionado !== "ANÁLISE") {
-			cellData.setValue(new Date());
+		var statusAtualNorm = normalizeText(valorSelecionado);
+		var statusAntigoNorm = typeof e.oldValue !== "undefined" ? normalizeText(e.oldValue) : null;
+
+		// Só prosseguir se houve alteração real do valor de status
+		if (statusAntigoNorm === null || statusAntigoNorm !== statusAtualNorm) {
+			if (!sheet.isRowHiddenByFilter(linha)) {
+				if (statusAtualNorm === "" || statusAtualNorm === "analise") {
+					if (cellData.getValue() !== "") {
+						cellData.setValue("");
+					}
+				} else {
+					cellData.setValue(new Date());
+					cellData.setNumberFormat('dd/MM/yyyy hh:mm');
+				}
+			}
 		}
 	}
 
@@ -82,14 +104,23 @@ function handleSpreadsheetEdit(e) {
 		var prazoLimite = new Date(dataDesligamento);
 		prazoLimite.setDate(prazoLimite.getDate() + 30);
 
-		if (dataAbertura > prazoLimite) {
-			cellAbertura.setFontColor("red");
-			cellAbertura.setComment(
-				"Abertura feita após 30 dias do desligamento. Verificar pendência ou justificativa.",
-			);
-		} else {
-			cellAbertura.setFontColor("black");
-			cellAbertura.setComment("");
+		if (!sheet.isRowHiddenByFilter(linha)) {
+			if (dataAbertura > prazoLimite) {
+				if (cellAbertura.getFontColor() !== "red") {
+					cellAbertura.setFontColor("red");
+				}
+				var msg = "Abertura feita após 30 dias do desligamento. Verificar pendência ou justificativa.";
+				if (cellAbertura.getComment() !== msg) {
+					cellAbertura.setComment(msg);
+				}
+			} else {
+				if (cellAbertura.getFontColor() !== "black") {
+					cellAbertura.setFontColor("black");
+				}
+				if (cellAbertura.getComment()) {
+					cellAbertura.setComment("");
+				}
+			}
 		}
 	}
 
@@ -739,152 +770,18 @@ function mostrarSobre() {
 
 // ==================================================
 // 📅 ATUALIZAÇÃO AUTOMÁTICA DE DATA NA COLUNA Q
+// (Unificada no handleSpreadsheetEdit e único onEdit no topo)
 // ==================================================
 
-/**
- * Função para atualizar automaticamente a data na coluna Q
- * quando o status for diferente de 'análise' e 'vazio'
- * Funciona APENAS na planilha '**CONTROLE 2025'
- */
-function onEdit(e) {
-  // Verificar se o evento existe
-  if (!e) return;
-  
-  const sheet = e.source.getActiveSheet();
-  const sheetName = sheet.getName();
-  const range = e.range;
-  
-  // RESTRIÇÃO: Executar apenas na planilha específica
-  if (sheetName !== '**CONTROLE 2025') {
-    return;
-  }
-  
-  // Verificar se a edição foi feita na coluna do status
-  // Assumindo que o status está em uma coluna específica (ajuste conforme necessário)
-  const statusColumn = getStatusColumn(); // Você precisa definir qual coluna contém o status
-  
-  if (range.getColumn() !== statusColumn) {
-    return;
-  }
-  
-  const editedRow = range.getRow();
-  const statusValue = range.getValue();
-  
-  // Verificar se o status é diferente de 'análise' e não está vazio
-  if (shouldUpdateDate(statusValue)) {
-    const dateColumn = 17; // Coluna Q (17ª coluna)
-    const dateCell = sheet.getRange(editedRow, dateColumn);
-    
-    // Atualizar com a data e hora atual
-    const now = new Date();
-    dateCell.setValue(now);
-    
-    // Opcional: Formatar a célula de data
-    dateCell.setNumberFormat('dd/mm/yyyy hh:mm');
-  }
+// ==================================================
+// 🔧 RECRIAR FILTRO DA ABA 'CONTROLE 2025'
+// ==================================================
+function corrigirFiltro() {
+    const sh = SpreadsheetApp.getActive().getSheetByName('CONTROLE 2025');
+    if (!sh) return;
+    const filter = sh.getFilter();
+    if (filter) filter.remove();
+    // Cria filtro cobrindo todas as linhas existentes da aba
+    sh.getRange(1, 1, sh.getMaxRows(), sh.getLastColumn()).createFilter();
 }
 
-/**
- * Determina qual coluna contém o status
- * AJUSTE ESTA FUNÇÃO conforme sua planilha
- */
-function getStatusColumn() {
-  // Exemplo: se o status está na coluna P (16ª coluna)
-  return 16;
-  
-  // Ou você pode buscar dinamicamente pelo cabeçalho:
-  /*
-  const sheet = SpreadsheetApp.getActiveSheet();
-  const headerRow = 1; // Assumindo que os cabeçalhos estão na linha 1
-  const headers = sheet.getRange(headerRow, 1, 1, sheet.getLastColumn()).getValues()[0];
-  
-  for (let i = 0; i < headers.length; i++) {
-    if (headers[i].toString().toLowerCase().includes('status')) {
-      return i + 1; // +1 porque getColumn() é 1-indexed
-    }
-  }
-  return null;
-  */
-}
-
-/**
- * Verifica se a data deve ser atualizada baseada no valor do status
- */
-function shouldUpdateDate(statusValue) {
-  if (!statusValue) return false;
-  
-  const status = statusValue.toString().toLowerCase().trim();
-  
-  // Não atualizar se for 'análise' ou vazio
-  if (status === 'análise' || status === '') {
-    return false;
-  }
-  
-  return true;
-}
-
-/**
- * Função alternativa caso você queira usar um trigger específico
- * em vez do onEdit global
- */
-function setupSpecificTrigger() {
-  // Deletar triggers existentes para evitar duplicação
-  const triggers = ScriptApp.getProjectTriggers();
-  triggers.forEach(trigger => {
-    if (trigger.getHandlerFunction() === 'onEditSpecific') {
-      ScriptApp.deleteTrigger(trigger);
-    }
-  });
-  
-  // Criar novo trigger
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  ScriptApp.newTrigger('onEditSpecific')
-    .onEdit()
-    .create();
-}
-
-/**
- * Handler específico com mais controles
- */
-function onEditSpecific(e) {
-  try {
-    const sheet = e.source.getActiveSheet();
-    const sheetName = sheet.getName();
-    
-    // Log para debug (remover em produção)
-    console.log(`Editando planilha: ${sheetName}`);
-    
-    // RESTRIÇÃO PRINCIPAL: apenas planilha específica
-    if (sheetName !== '**CONTROLE 2025') {
-      console.log(`Ignorando edição em: ${sheetName}`);
-      return;
-    }
-    
-    const range = e.range;
-    const editedRow = range.getRow();
-    const editedColumn = range.getColumn();
-    const newValue = range.getValue();
-    
-    // Definir qual coluna contém o status (ajuste conforme necessário)
-    const statusColumn = getStatusColumn();
-    
-    if (editedColumn !== statusColumn) {
-      return;
-    }
-    
-    // Verificar condições para atualização
-    if (shouldUpdateDate(newValue)) {
-      const dateColumn = 17; // Coluna Q
-      const dateCell = sheet.getRange(editedRow, dateColumn);
-      
-      const currentDate = new Date();
-      dateCell.setValue(currentDate);
-      dateCell.setNumberFormat('dd/mm/yyyy hh:mm:ss');
-      
-      console.log(`Data atualizada na linha ${editedRow}: ${currentDate}`);
-    }
-    
-  } catch (error) {
-    console.error('Erro na função onEditSpecific:', error);
-  }
-}
