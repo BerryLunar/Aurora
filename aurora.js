@@ -324,9 +324,13 @@ function adicionarLinkControleMemos(tipo, numeroDoc, secretaria, cargo, processo
 		var hoje = new Date();
 		var dataFormatada = Utilities.formatDate(hoje, Session.getScriptTimeZone(), "dd/MM");
 
+		// Limpa aspas duplas da URL e do número do documento para evitar conflitos
+		var urlLimpa = url.toString().replace(/"/g, '');
+		var numeroDocLimpo = numeroDoc.toString().replace(/"/g, '');
+
 		if (tipo === "memorando") {
-			// Coluna B - Memo
-			sheetMemos.getRange(proximaLinha, 2).setFormula(`=HYPERLINK("${url}","${numeroDoc}")`);
+			// Coluna B - Memo - CORREÇÃO: usando aspas simples na fórmula
+			sheetMemos.getRange(proximaLinha, 2).setFormula('=HYPERLINK("' + urlLimpa + '","' + numeroDocLimpo + '")');
 			// Coluna C - Data
 			sheetMemos.getRange(proximaLinha, 3).setValue(dataFormatada);
 			// Coluna D - Secretaria
@@ -336,8 +340,8 @@ function adicionarLinkControleMemos(tipo, numeroDoc, secretaria, cargo, processo
 			// Coluna G - Processo
 			sheetMemos.getRange(proximaLinha, 7).setValue(processo);
 		} else if (tipo === "relatorio") {
-			// Coluna F - Relatórios
-			sheetMemos.getRange(proximaLinha, 6).setFormula(`=HYPERLINK("${url}","${numeroDoc}")`);
+			// Coluna F - Relatórios - CORREÇÃO: usando aspas simples na fórmula
+			sheetMemos.getRange(proximaLinha, 6).setFormula('=HYPERLINK("' + urlLimpa + '","' + numeroDocLimpo + '")');
 			// Coluna C - Data
 			sheetMemos.getRange(proximaLinha, 3).setValue(dataFormatada);
 			// Coluna D - Secretaria
