@@ -1,6 +1,6 @@
 /*
 ==================================================
-📌 SCRIPT: Monitoramento, Alertas e Geração de Relatórios
+🔌 SCRIPT: Monitoramento, Alertas e Geração de Relatórios
 ==================================================
 
 🧠 OBJETIVO:
@@ -8,13 +8,13 @@ Este script é executado automaticamente quando a planilha é editada.
 Ele realiza as seguintes funções principais:
 
 1️⃣ Quando o status (coluna A) muda para "ANÁLISE RETORNO":
-   - Envia um e-mail automático para o auditor responsável (coluna T)
+   - Envia um e-mail automático para o auditor responsável (coluna R)
    - Insere um balão de comentário na célula com o nome do auditor
 
 2️⃣ Quando o status muda para qualquer valor (exceto vazio ou "ANÁLISE"):
-   - Atualiza a data de tramitação (coluna R) com a data atual
+   - Atualiza a data de tramitação (coluna P) com a data atual
 
-3️⃣ Verifica se a data de abertura (coluna D) ultrapassa 30 dias após a data de desligamento (coluna O):
+3️⃣ Verifica se a data de abertura (coluna D) ultrapassa 30 dias após a data de desligamento (coluna N):
    - Se ultrapassar:
      • Colore a célula da data de abertura em vermelho
      • Adiciona um balão de comentário com o aviso: 
@@ -31,7 +31,7 @@ Ele realiza as seguintes funções principais:
 📧 E-mail: luana.41331@santanadeparnaiba.sp.gov.br  
 📞 Ramal: 8819
 
-🕒 Última atualização: 16/07/2025
+🕐 Última atualização: 16/07/2025
 */
 
 // === GATILHO DE EDIÇÃO ===
@@ -65,18 +65,31 @@ function handleSpreadsheetEdit(e) {
 			.trim();
 	}
 
-	// COLUNAS IMPORTANTES
-	var colunaStatus = 1; // A
-	var colunaProcesso = 2; // B
-	var colunaAbertura = 4; // D
-	var colunaSecretaria = 6; // F
-	var colunaDesligamento = 15; // O
-	var colunaData = 17; // Q
-	var colunaAuditor = 19; // S
+	// COLUNAS IMPORTANTES - ATUALIZADAS CONFORME NOVA ORDEM
+	var colunaStatus = 1; // A - STATUS
+	var colunaProcesso = 2; // B - PROCESSO
+	var colunaTipo = 3; // C - TIPO MOVIMENTAÇÃO
+	var colunaAbertura = 4; // D - DATA ABERTURA
+	var colunaEnvioADP = 5; // E - ENVIO ADP
+	var colunaSecretaria = 6; // F - SECRETARIA
+	var colunaDepartamento = 7; // G - DEPARTAMENTO
+	var colunaCargo = 8; // H - CARGO
+	var colunaQuantidade = 9; // I - QTD SOLICITADA
+	var colunaSalario = 10; // J - SALÁRIO MENSAL
+	var colunaCustoAnual = 11; // K - CUSTO ANUAL
+	var colunaNome = 12; // L - Nome
+	var colunaProntuario = 13; // M - Prontuário
+	var colunaDesligamento = 14; // N - Desligamento/ Retorno
+	var colunaDetalhamento = 15; // O - DETALHAMENTO
+	var colunaDataTramitacao = 16; // P - DATA TRAMITAÇÃO
+	var colunaFluxo = 17; // Q - FLUXO
+	var colunaAuditor = 18; // R - AUDITOR
+	var colunaMemo = 19; // S - MEMO
+	var colunaRelatorio = 20; // T - RELATÓRIO
 
-	// BLOCO 1 – Atualiza data na coluna Q se o status mudou (exceto "ANÁLISE")
+	// BLOCO 1 – Atualiza data na coluna P se o status mudou (exceto "ANÁLISE")
 	if (sheetName === "CONTROLE 2025" && coluna === colunaStatus && linha > 1) {
-		var cellData = sheet.getRange(linha, colunaData);
+		var cellData = sheet.getRange(linha, colunaDataTramitacao);
 		var statusAtualNorm = normalizeText(valorSelecionado);
 		var statusAntigoNorm = typeof e.oldValue !== "undefined" ? normalizeText(e.oldValue) : null;
 
@@ -137,9 +150,8 @@ function handleSpreadsheetEdit(e) {
 		}
 	}
 
-	// BLOCO 4 – Limpeza e verificação de prontuários duplicados (coluna N = 14)
+	// BLOCO 4 – Limpeza e verificação de prontuários duplicados (coluna M = 13)
 	var abasPermitidas = ["CONTROLE 2025"];
-	var colunaProntuario = 14;
 
 	if (
 		abasPermitidas.includes(sheetName) &&
@@ -215,10 +227,10 @@ function notificarAuditor() {
 		var linha = linhas[i];
 		if (linha < 2) continue;
 
-		var nomeAuditor = sheet.getRange(linha, 18).getValue();
-		var processo = sheet.getRange(linha, 2).getValue();
-		var secretaria = sheet.getRange(linha, 6).getValue();
-		var statusAtual = sheet.getRange(linha, 1).getValue();
+		var nomeAuditor = sheet.getRange(linha, 18).getValue(); // Coluna R - AUDITOR
+		var processo = sheet.getRange(linha, 2).getValue(); // Coluna B - PROCESSO
+		var secretaria = sheet.getRange(linha, 6).getValue(); // Coluna F - SECRETARIA
+		var statusAtual = sheet.getRange(linha, 1).getValue(); // Coluna A - STATUS
 
 		if (statusAtual !== "ANÁLISE RETORNO") {
 			console.log(
@@ -264,10 +276,10 @@ function notificarAuditor() {
 
 // ID da pasta onde os documentos serão salvos
 const PASTA_DOCUMENTOS_ID = "1OBHunABxlCl0WHsBKFse-6icL8Aat4Py";
+
 // ==================================================
 // 🗂️ FUNÇÃO PARA MOVER ARQUIVO PARA PASTA ESPECÍFICA
 // ==================================================
-
 function moverArquivoParaPasta(docId, nomeArquivo) {
 	try {
 		var arquivo = DriveApp.getFileById(docId);
@@ -290,6 +302,60 @@ function moverArquivoParaPasta(docId, nomeArquivo) {
 		return false;
 	}
 }
+
+// ==================================================
+// 🔗 FUNÇÃO PARA ADICIONAR LINK NA ABA 'Controle de Memos'
+// ==================================================
+function adicionarLinkControleMemos(tipo, numeroDoc, secretaria, cargo, processo, url) {
+	try {
+		var ss = SpreadsheetApp.getActiveSpreadsheet();
+		var sheetMemos = ss.getSheetByName("Controle de Memos");
+		
+		if (!sheetMemos) {
+			Logger.log("Aba 'Controle de Memos' não encontrada.");
+			return false;
+		}
+
+		// Encontra a próxima linha vazia
+		var ultimaLinha = sheetMemos.getLastRow();
+		var proximaLinha = ultimaLinha + 1;
+
+		// Data atual formatada
+		var hoje = new Date();
+		var dataFormatada = Utilities.formatDate(hoje, Session.getScriptTimeZone(), "dd/MM");
+
+		if (tipo === "memorando") {
+			// Coluna B - Memo
+			sheetMemos.getRange(proximaLinha, 2).setFormula(`=HYPERLINK("${url}","${numeroDoc}")`);
+			// Coluna C - Data
+			sheetMemos.getRange(proximaLinha, 3).setValue(dataFormatada);
+			// Coluna D - Secretaria
+			sheetMemos.getRange(proximaLinha, 4).setValue(secretaria);
+			// Coluna E - Cargo
+			sheetMemos.getRange(proximaLinha, 5).setValue(cargo);
+			// Coluna G - Processo
+			sheetMemos.getRange(proximaLinha, 7).setValue(processo);
+		} else if (tipo === "relatorio") {
+			// Coluna F - Relatórios
+			sheetMemos.getRange(proximaLinha, 6).setFormula(`=HYPERLINK("${url}","${numeroDoc}")`);
+			// Coluna C - Data
+			sheetMemos.getRange(proximaLinha, 3).setValue(dataFormatada);
+			// Coluna D - Secretaria
+			sheetMemos.getRange(proximaLinha, 4).setValue(secretaria);
+			// Coluna E - Cargo
+			sheetMemos.getRange(proximaLinha, 5).setValue(cargo);
+			// Coluna G - Processo
+			sheetMemos.getRange(proximaLinha, 7).setValue(processo);
+		}
+
+		Logger.log(`Link do ${tipo} adicionado na aba 'Controle de Memos' com sucesso.`);
+		return true;
+	} catch (error) {
+		Logger.log(`Erro ao adicionar link na aba 'Controle de Memos': ${error.toString()}`);
+		return false;
+	}
+}
+
 // ==================================================
 // 📄 GERADOR DE Relatório Técnico
 // ==================================================
@@ -309,16 +375,16 @@ function gerarRelatorioTecnico() {
 		}
 
 		var dados = {
-			sisgep: sheet.getRange(linha, 2).getValue() || "N/A",
-			secretaria: sheet.getRange(linha, 6).getValue() || "N/A",
-			tipo: sheet.getRange(linha, 3).getValue() || "N/A",
-			dataAbertura: sheet.getRange(linha, 4).getValue() || new Date(),
-			cargo: sheet.getRange(linha, 8).getValue() || "N/A",
-			quantidade: sheet.getRange(linha, 9).getValue() || 1,
-			nomeServidor: sheet.getRange(linha, 13).getValue() || "",
-			prontuario: sheet.getRange(linha, 14).getValue() || "",
-			desligamento: sheet.getRange(linha, 15).getValue() || "",
-			justificativa: sheet.getRange(linha, 16).getValue() || "",
+			sisgep: sheet.getRange(linha, 2).getValue() || "N/A", // B - PROCESSO
+			secretaria: sheet.getRange(linha, 6).getValue() || "N/A", // F - SECRETARIA
+			tipo: sheet.getRange(linha, 3).getValue() || "N/A", // C - TIPO MOVIMENTAÇÃO
+			dataAbertura: sheet.getRange(linha, 4).getValue() || new Date(), // D - DATA ABERTURA
+			cargo: sheet.getRange(linha, 8).getValue() || "N/A", // H - CARGO
+			quantidade: sheet.getRange(linha, 9).getValue() || 1, // I - QTD SOLICITADA
+			nomeServidor: sheet.getRange(linha, 12).getValue() || "", // L - Nome
+			prontuario: sheet.getRange(linha, 13).getValue() || "", // M - Prontuário
+			desligamento: sheet.getRange(linha, 14).getValue() || "", // N - Desligamento/ Retorno
+			justificativa: sheet.getRange(linha, 15).getValue() || "", // O - DETALHAMENTO
 		};
 
 		var numeroRelatorio = Math.floor(Math.random() * 9000) + 1000;
@@ -479,26 +545,16 @@ function gerarRelatorioTecnico() {
 
 		reopenedDoc.saveAndClose();
 
-		// Move o arquivo para a pasta específica (se PASTA_DOCUMENTOS_ID estiver definido)
-		if (
-			PASTA_DOCUMENTOS_ID &&
-			PASTA_DOCUMENTOS_ID !== "1OBHunABxlCl0WHsBKFse-6icL8Aat4Py"
-		) {
+		// Move o arquivo para a pasta específica
+		if (PASTA_DOCUMENTOS_ID) {
 			moverArquivoParaPasta(docId, nomeDoc);
 		}
 
-		// Adiciona o link do relatório na coluna U (21) - CORREÇÃO DO HYPERLINK
+		// Adiciona o link na aba 'Controle de Memos'
 		var url = reopenedDoc.getUrl();
-		try {
-			var cellRelatorio = sheet.getRange(linha, 21); // Coluna U
-			cellRelatorio.setFormula('=HYPERLINK("' + url + '","RT")');
-		} catch (linkError) {
-			Logger.log(
-				"Erro ao inserir hyperlink do relatório: " + linkError.toString(),
-			);
-			// Fallback: inserir apenas o URL
-			sheet.getRange(linha, 22).setValue(url);
-		}
+		var numeroDocFormatado = `RT ${numeroRelatorio}/2025`;
+		adicionarLinkControleMemos("relatorio", numeroDocFormatado, dados.secretaria, dados.cargo, dados.sisgep, url);
+
 		var htmlOutput = HtmlService.createHtmlOutput(`
         <script>
           window.open('${url}', '_blank');
@@ -523,7 +579,6 @@ function gerarRelatorioTecnico() {
 // ==================================================
 // 📄 GERADOR DE MEMORANDO ADP
 // ==================================================
-
 function gerarMemorandoADP() {
 	try {
 		var sheet = SpreadsheetApp.getActiveSheet();
@@ -539,13 +594,13 @@ function gerarMemorandoADP() {
 		}
 
 		var dados = {
-			sisgep: sheet.getRange(linha, 2).getValue() || "N/A",
-			secretaria: sheet.getRange(linha, 6).getValue() || "N/A",
-			tipo: sheet.getRange(linha, 3).getValue() || "N/A",
-			cargo: sheet.getRange(linha, 8).getValue() || "N/A",
-			quantidade: sheet.getRange(linha, 9).getValue() || 1,
-			nomeServidor: sheet.getRange(linha, 13).getValue() || "",
-			prontuario: sheet.getRange(linha, 14).getValue() || "",
+			sisgep: sheet.getRange(linha, 2).getValue() || "N/A", // B - PROCESSO
+			secretaria: sheet.getRange(linha, 6).getValue() || "N/A", // F - SECRETARIA
+			tipo: sheet.getRange(linha, 3).getValue() || "N/A", // C - TIPO MOVIMENTAÇÃO
+			cargo: sheet.getRange(linha, 8).getValue() || "N/A", // H - CARGO
+			quantidade: sheet.getRange(linha, 9).getValue() || 1, // I - QTD SOLICITADA
+			nomeServidor: sheet.getRange(linha, 12).getValue() || "", // L - Nome
+			prontuario: sheet.getRange(linha, 13).getValue() || "", // M - Prontuário
 		};
 
 		var numeroMemo = Math.floor(Math.random() * 9000) + 1000;
@@ -695,26 +750,16 @@ function gerarMemorandoADP() {
 
 		reopenedDoc.saveAndClose();
 
-		// Move o arquivo para a pasta específica (se PASTA_DOCUMENTOS_ID estiver definido)
-		if (
-			PASTA_DOCUMENTOS_ID &&
-			PASTA_DOCUMENTOS_ID !== "1OBHunABxlCl0WHsBKFse-6icL8Aat4Py"
-		) {
+		// Move o arquivo para a pasta específica
+		if (PASTA_DOCUMENTOS_ID) {
 			moverArquivoParaPasta(docId, nomeDoc);
 		}
 
-		// Adiciona o link do memorando na coluna T (20) - CORREÇÃO DO HYPERLINK
+		// Adiciona o link na aba 'Controle de Memos'
 		var url = reopenedDoc.getUrl();
-		try {
-			var cellMemo = sheet.getRange(linha, 20); // Coluna T
-			cellMemo.setFormula('=HYPERLINK("' + url + '","Memo")');
-		} catch (linkError) {
-			Logger.log(
-				"Erro ao inserir hyperlink do memorando: " + linkError.toString(),
-			);
-			// Fallback: inserir apenas o URL
-			sheet.getRange(linha, 21).setValue(url);
-		}
+		var numeroDocFormatado = `${numeroMemo}/2025`;
+		adicionarLinkControleMemos("memorando", numeroDocFormatado, dados.secretaria, dados.cargo, dados.sisgep, url);
+
 		var htmlOutput = HtmlService.createHtmlOutput(`
         <script>
           window.open('${url}', '_blank');
@@ -751,25 +796,25 @@ function onOpen() {
 
 function mostrarSobre() {
 	SpreadsheetApp.getUi().alert(
-		"📋 Aurora - Gestão Inteligente - Versão 2.3",
+		"📋 Aurora - Gestão Inteligente - Versão 2.4",
 		"Desenvolvido por: Luana Halcsik Leite\n\n" +
-			"🔸 Funcionalidades:\n" +
+			"📸 Funcionalidades:\n" +
 			"• Monitoramento automático de processos\n" +
 			"• Controle de usuários e permissões\n" +
 			"• Alertas por e-mail\n" +
 			"• Geração automática de relatórios\n" +
 			"• Geração automática de memorandos\n" +
 			"• Salvamento automático em pasta específica\n" +
-			"• Links automáticos na planilha\n\n" +
+			"• Links automáticos na aba 'Controle de Memos'\n\n" +
 			"📧 Suporte: luana.41331@santanadeparnaiba.sp.gov.br\n" +
 			"📞 Ramal: 8819\n\n" +
-			"🆕 Última atualização: 16/07/2025",
+			"🆕 Última atualização: 16/09/2025",
 		SpreadsheetApp.getUi().ButtonSet.OK,
 	);
 }
 
 // ==================================================
-// 📅 ATUALIZAÇÃO AUTOMÁTICA DE DATA NA COLUNA Q
+// 📅 ATUALIZAÇÃO AUTOMÁTICA DE DATA NA COLUNA P
 // (Unificada no handleSpreadsheetEdit e único onEdit no topo)
 // ==================================================
 
@@ -784,4 +829,3 @@ function corrigirFiltro() {
     // Cria filtro cobrindo todas as linhas existentes da aba
     sh.getRange(1, 1, sh.getMaxRows(), sh.getLastColumn()).createFilter();
 }
-
