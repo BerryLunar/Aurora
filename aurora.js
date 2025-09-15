@@ -330,7 +330,7 @@ function adicionarLinkControleMemos(tipo, numeroDoc, secretaria, cargo, processo
 
 		if (tipo === "memorando") {
 			// Coluna B - Memo - CORREÇÃO: usando aspas simples na fórmula
-			sheetMemos.getRange(proximaLinha, 2).setFormula('=HYPERLINK("' + urlLimpa + '","' + numeroDocLimpo + '")');
+			sheetMemos.getRange(proximaLinha, 2).setFormula('=HYPERLINK("' + urlLimpa + '";"' + numeroDocLimpo + '")');
 			// Coluna C - Data
 			sheetMemos.getRange(proximaLinha, 3).setValue(dataFormatada);
 			// Coluna D - Secretaria
@@ -341,7 +341,7 @@ function adicionarLinkControleMemos(tipo, numeroDoc, secretaria, cargo, processo
 			sheetMemos.getRange(proximaLinha, 7).setValue(processo);
 		} else if (tipo === "relatorio") {
 			// Coluna F - Relatórios - CORREÇÃO: usando aspas simples na fórmula
-			sheetMemos.getRange(proximaLinha, 6).setFormula('=HYPERLINK("' + urlLimpa + '","' + numeroDocLimpo + '")');
+			sheetMemos.getRange(proximaLinha, 6).setFormula('=HYPERLINK("' + urlLimpa + '";"' + numeroDocLimpo + '")');
 			// Coluna C - Data
 			sheetMemos.getRange(proximaLinha, 3).setValue(dataFormatada);
 			// Coluna D - Secretaria
