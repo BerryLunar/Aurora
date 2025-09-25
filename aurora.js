@@ -465,7 +465,6 @@ const MEMORANDO_CONFIG = {
 			  
 			  // Pinta de amarelo para marcar como usado
 			  cell.setBackground("#FFFF00");
-			  cell.setComment("Usado em: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"));
 			  
 			  Logger.log(`Número encontrado e marcado como usado: ${numero}`);
 			  return numero.toString().trim();
