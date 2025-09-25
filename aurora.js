@@ -435,33 +435,46 @@ const MEMORANDO_CONFIG = {
 	  const values = range.getValues();
 	  const backgrounds = range.getBackgrounds();
   
-	  Logger.log("Procurando por números disponíveis...");
+	  Logger.log("Procurando por números disponíveis (sem cor de fundo)...");
   
+	  // Percorre linha por linha, coluna por coluna
 	  for (let i = 0; i < values.length; i++) {
 		for (let j = 0; j < values[i].length; j++) {
 		  const numero = values[i][j];
 		  const cor = backgrounds[i][j];
 		  
-		  // Debug do que está sendo encontrado
+		  // Verifica se a célula tem número válido
 		  if (numero && numero.toString().trim() !== "") {
+			
+			// Debug do que está sendo encontrado
 			Logger.log(`Célula [${i+1},${j+1}]: Valor="${numero}", Cor="${cor}"`);
-		  }
-		  
-		  // Procura por células com número válido e sem cor amarela (não utilizadas)
-		  if (numero && numero.toString().trim() !== "" && 
-			  cor !== "#ffff00" && cor !== "#FFFF00" && cor.toLowerCase() !== "#ffff00") {
 			
-			const cell = sheet.getRange(i + 1, j + 1);
-			cell.setBackground("#ffff00");
-			cell.setComment("Usado em: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"));
+			// Procura por células SEM cor de fundo (disponíveis)
+			// Células vazias/brancas podem ter cor "" ou "#ffffff" ou null
+			const celulaSemCor = (
+			  cor === "" || 
+			  cor === "#ffffff" || 
+			  cor === "#FFFFFF" || 
+			  cor === null || 
+			  cor === undefined ||
+			  cor.toLowerCase() === "#ffffff"
+			);
 			
-			Logger.log(`Número encontrado e marcado: ${numero}`);
-			return numero.toString().trim();
+			if (celulaSemCor) {
+			  const cell = sheet.getRange(i + 1, j + 1);
+			  
+			  // Pinta de amarelo para marcar como usado
+			  cell.setBackground("#FFFF00");
+			  cell.setComment("Usado em: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"));
+			  
+			  Logger.log(`Número encontrado e marcado como usado: ${numero}`);
+			  return numero.toString().trim();
+			}
 		  }
 		}
 	  }
 	  
-	  throw new Error("Nenhum número disponível na planilha de numeração.");
+	  throw new Error("Nenhum número disponível na planilha de numeração. Todos os números já foram utilizados.");
 	  
 	} catch (error) {
 	  Logger.log("Erro detalhado ao buscar número: " + error.toString());
